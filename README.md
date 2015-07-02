@@ -5,16 +5,16 @@ Approaches for Genetic Programming by Jonathan Fieldsend and Alberto Moraglio
 
 Class to run is the BooleanGPO class in the mogp pcakage. You will need to compile the source of the package first.
 
-When running, arguments need to be provided at the command line. If these are ommitted some advice is provided, i.e., if the command line prompt is indicted with >>
+When running, arguments need to be provided at the command line. If these are ommitted some advice is provided, i.e., if the command line prompt is indicted with prompt]
 
->> java mogp.BooleanGP
+prompt] java mogp.BooleanGP
 Insufficient arguments, requires: maintenence type (R, B, BP, F, FP, S, SP, D or DP) problem type (2, 4 or 8) population size (postive integer) fold start number fold end number
 
 Please refer to the documentation for the range of problem type arguments (and their interpretation)
 
 A run of the DP maintence approach across 5 folds, on problem type 2, with a search population of 100,  would therefore be invoked with:  
 
->> java mogp.BooleanGP DP 2 100 1 5
+prompt] java mogp.BooleanGP DP 2 100 1 5
 FOLD: 1
 Pareto set size: 10
 Pareto set size: 9
