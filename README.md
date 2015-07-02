@@ -3,7 +3,7 @@
 Codebase for GECCO 2015 paper Strength Through Diversity: Disaggregation and Multi-Objectivisation 
 Approaches for Genetic Programming by Jonathan Fieldsend and Alberto Moraglio 
 
-Class to run is the BooleanGPO class in the mogp pcakage. You will need to compile the source of the package first.
+Class to run is the BooleanGPO class in the mogp package. You will need to compile the source of the package first.
 
 When running, arguments need to be provided at the command line. If these are ommitted some advice is provided, i.e., if the command line prompt is indicted with prompt]
 
