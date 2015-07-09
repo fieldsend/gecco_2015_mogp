@@ -1,5 +1,9 @@
 package mogp;
 
+
+import java.lang.management.ThreadMXBean;
+import java.lang.management.ManagementFactory;
+
 /**
  * Timing class is a helper class to track timings of
  * certain sections of code, and for the total run.
@@ -9,31 +13,35 @@ package mogp;
  */
 public class Timing
 {
-    static int calls = 0;
-    static double accruedTime = 0.0;
-    static long startTime = 0L;
-    static long endTime = 0L;
+    private static int calls = 0;
+    private static double accruedTime = 0.0;
+    private static long startTime = 0L;
+    private static long endTime = 0L;
     
-    static double totalAccruedTime = 0.0;
-    static long totalStartTime = 0L;
-    static long totalEndTime = 0L;
+    private static double totalAccruedTime = 0.0;
+    private static long totalStartTime = 0L;
+    private static long totalEndTime = 0L;
     
-    static boolean everStarted = false;
-    static boolean totalEverStarted = false;
+    private static boolean everStarted = false;
+    private static boolean totalEverStarted = false;
+    
+    // object to get thread clock time
+    private static ThreadMXBean mxbean = ManagementFactory.getThreadMXBean();
+    
     
     /**
      * Track time from now
      */
     static void setStartTime() {
         everStarted = true;
-        startTime = System.nanoTime();
+        startTime = mxbean.getCurrentThreadCpuTime();
     }
     
     /**
      * Stop tracking time
      */
     static void setEndTime() {
-        endTime = System.nanoTime();
+        endTime = mxbean.getCurrentThreadCpuTime();
         if (everStarted==false) // if never started then want difference to be zero
             startTime = endTime;
     }
@@ -51,7 +59,7 @@ public class Timing
      */
     static void setTotalStartTime() {
         totalEverStarted = true;
-        totalStartTime = System.nanoTime();
+        totalStartTime = mxbean.getCurrentThreadCpuTime();
     }
     
     
@@ -59,7 +67,7 @@ public class Timing
      * Stop tracking total time
      */
     static void setTotalEndTime() {
-        totalEndTime = System.nanoTime();
+        totalEndTime = mxbean.getCurrentThreadCpuTime();
         if (totalEverStarted==false) // if never started then want difference to be zero
             startTime = endTime;
     }

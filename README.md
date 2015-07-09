@@ -40,17 +40,17 @@ Pareto set size: 6
 Pareto set size: 7
 Pareto set size: 1
 
-total time: 16.724557000000253 milli seconds
+total time: 54.5680000000047 milli seconds
 
 calls: 18800 times
 
-Av time per gen: 8.896040957446943E-4 milli seconds
+Av time per gen: 0.002902553191489612 milliseconds
 
-total time: 3091.561524 milli seconds
+total time: 734.833 milliseconds
 
-Percentage total: 0.5409744192430391%
+Percentage total: 7.425904933502538%
 
-Details printed to the screen for this approach include the number of nondominated members at each generation, and at the end of the run the total number of calls to the Pareto set maintenance rountines, and the percentage of the run time spent on this (note there are more efficient regimes available for preserving non-dominated sets, as referred to in the original manuscript).
+Details printed to the screen for this approach include the number of nondominated members at each generation, and at the end of the run the total number of calls to the Pareto set maintenance routines, and the percentage of the run time spent on this (note there are more efficient regimes available for preserving non-dominated sets than those implemented here, as referred to in the original manuscript).
 
 Additionally files tracking quality will be written out, specifically in the example here
 
