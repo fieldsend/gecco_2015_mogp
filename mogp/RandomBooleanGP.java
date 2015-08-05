@@ -1,5 +1,7 @@
 package mogp;
 
+import java.util.HashMap;
+
 /**
  * Version of the Boolean GP that acts like random
  * to be a baseline comparison, i.e. generates putative solutions
@@ -52,7 +54,8 @@ public class RandomBooleanGP
             ArraySolution s = new ArraySolution(parameters,problem, nodeSet);
             while(s.size() > parameters.MAX_LENGTH)
                 s = new ArraySolution(parameters, problem, nodeSet);
-            tempFitness = evaluate(s,0);
+            evaluate(s);
+            tempFitness = s.getSumOfTestsFailed();
             counter++;
             
             if (tempFitness < bestPopulationFitness){
@@ -85,11 +88,12 @@ public class RandomBooleanGP
     }
     
     /*
-     * Helper method to evaluate the solution and store fitness at corresponding index
+     * Method evaluates the fitness of a population
      */
-    private int evaluate(ArraySolution s, int index) {
-        return maintenance.fitnessFunction(s, index);
+    void evaluate(ArraySolution s) {
+        maintenance.evaluateFitness(new HashMap<Integer, ArraySolution>(),s);
     }
+
 
     /*
      * Helper method to print statistics

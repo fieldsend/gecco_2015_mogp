@@ -1,5 +1,5 @@
 package mogp;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.io.IOException;
 
 /**
@@ -13,20 +13,20 @@ import java.io.IOException;
  * and the GP functionality is closely modelled on the TinyGP.
  * 
  * @author Jonathan Fieldsend 
- * @version 1.0
+ * @version 1.1
  */
 public class BooleanGP
 {
     // attributes used by the optimiser to store and compare solutions
-    ArrayList<ArraySolution> searchPopulation = new ArrayList<>(); //search population
+    HashMap<Integer,ArraySolution> searchPopulation = new HashMap<>(); //search population
     private long seed; // random seed used
     final Problem problem; // problem to be solved
     final Parameters parameters; // parameters object (meta parameters of run)
     private double averageLength; // holder for average tree size
-    private int bestPopulationFitness = Integer.MAX_VALUE; // initial value for best fitness (initialise as worst possible)
-    private int bestSize = Integer.MAX_VALUE; // initial value for best size (initialise as worst possible)
+    int bestPopulationFitness = Integer.MAX_VALUE; // initial value for best fitness (initialise as worst possible)
+    int bestSize = Integer.MAX_VALUE; // initial value for best size (initialise as worst possible)
     private double averagePopulationFitness, averagePopulationLength; // quality tracking attributes 
-    private GPMaintenance maintenance; // maintance regime used
+    GPMaintenance maintenance; // maintance regime used
     private Results results; // results object
     private NodeSet nodeSet; // node set object
     /**
@@ -71,31 +71,37 @@ public class BooleanGP
             System.out.println("Population size must be at least 1, has been set to" + popSize);
             System.exit(1);
         }
+        int maxTreeElements = 10000;
+        if (args.length==6) { // optional argument of max tree elements
+            maxTreeElements = Integer.parseInt(args[5]);
+        }
         Timing.setTotalStartTime();
         for (int i=fold_start; i<=fold_end; i++)   {
             System.out.println("FOLD: " + i);
             Problem problem = (args[1].equals("2")) ? new TwoToOneMultiplexer() :
-                          (args[1].equals("4")) ? new FourToOneMultiplexer() :
-                          (args[1].equals("8")) ? new EightToOneMultiplexer() :
-                          (Integer.parseInt(args[1])<=100) ? new EvenNParity(Integer.parseInt(args[1])-10) :
-                          (Integer.parseInt(args[1])<=200) ? new MajorityProblem(Integer.parseInt(args[1])-100) :
-                          new ComparisonProblem(Integer.parseInt(args[1])-200);
-                          
+                (args[1].equals("4")) ? new FourToOneMultiplexer() :
+                (args[1].equals("8")) ? new EightToOneMultiplexer() :
+                (Integer.parseInt(args[1])<=100) ? new EvenNParity(Integer.parseInt(args[1])-10) :
+                (Integer.parseInt(args[1])<=200) ? new MajorityProblem(Integer.parseInt(args[1])-100) :
+                new ComparisonProblem(Integer.parseInt(args[1])-200);
+
             // Meta-parameters used in the GECCO paper           
-            Parameters parameters = new Parameters(10000, popSize, 1000000/popSize, 2, 0.05, 0.9);
-            
+            Parameters parameters = new Parameters(maxTreeElements, popSize, 1000000/popSize, 2, 0.05, 0.9);
+
             // dynamically construct the GPMaintence object. Would be nice to refactor this to a factory
             // method at some point
             GPMaintenance maintenance = (args[0].equals("R")) ? new StandardMaintenance(problem,parameters) :
-                                    (args[0].equals("B")) ? new StandardMaintenance(problem,parameters) :
-                                    (args[0].equals("BP")) ? new StandardMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS) :
-                                    (args[0].equals("F")) ? new FitnessSharingMaintenance(problem,parameters) :
-                                    (args[0].equals("FP")) ? new FitnessSharingMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS) :
-                                    (args[0].equals("S")) ? new BestSolver(problem,parameters) :
-                                    (args[0].equals("SP")) ? new BestSolver(problem,parameters, MinimisationType.PARSIMONIOUS) :
-                                    (args[0].equals("D")) ? new DominationMaintenance(problem,parameters, MinimisationType.STANDARD) :
-                                    new DominationMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS);
-                                         
+                (args[0].equals("B")) ? new StandardMaintenance(problem,parameters) :
+                (args[0].equals("BP")) ? new StandardMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS) :
+                (args[0].equals("F")) ? new FitnessSharingMaintenance(problem,parameters) :
+                (args[0].equals("FP")) ? new FitnessSharingMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS) :
+                (args[0].equals("L")) ? new LexicaseMaintenance(problem,parameters) :
+                (args[0].equals("LP")) ? new LexicaseMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS) :
+                (args[0].equals("S")) ? new BestSolver(problem,parameters) :
+                (args[0].equals("SP")) ? new BestSolver(problem,parameters, MinimisationType.PARSIMONIOUS) :
+                (args[0].equals("D")) ? new DominationMaintenance(problem,parameters, MinimisationType.STANDARD) :
+                new DominationMaintenance(problem,parameters, MinimisationType.PARSIMONIOUS);
+
             Results results = new Results("bool_gecco2015_type" + args[0] + "_problem" + args[1] + "_pop" + popSize + "_fold" + i + "_results.txt", (int) 1000000/popSize);
             if (args[0].equals("R")){
                 RandomBooleanGP rgp = new RandomBooleanGP((long) i, problem, parameters, maintenance, results);
@@ -107,7 +113,7 @@ public class BooleanGP
                 evals[i-1] = gp.evolve();
                 gp.writeResultsFile();
             }
-            
+
         }
         Timing.setTotalEndTime();
         Timing.updateTotalAccruedTime();
@@ -119,7 +125,7 @@ public class BooleanGP
     /*
      * constructor to set up optimiser prior to running
      */
-    private BooleanGP(long seed, Problem problem, Parameters parameters, GPMaintenance maintenance, Results results) {
+    BooleanGP(long seed, Problem problem, Parameters parameters, GPMaintenance maintenance, Results results) {
         if (seed>=0)
             RandomNumberGenerator.setSeed(seed);
         this.problem = problem;
@@ -131,72 +137,73 @@ public class BooleanGP
             ArraySolution s = new ArraySolution(parameters,problem, nodeSet);
             while(s.size() > parameters.MAX_LENGTH)
                 s = new ArraySolution(parameters, problem, nodeSet);
-            searchPopulation.add(s);
+            searchPopulation.put(i,s);
         }
     }
-    
+
     /*
      * Method runs the GP till all generations are exhausted
      */
-    private int evolve() {
-        int worstSolutionIndex, tempFitness, evaluationsToSolve=-1, counter =0;
+    int evolve() {
+        int worstSolutionIndex, evaluationsToSolve=-1;
+        // evauate initial search population
         for (int i=0; i<parameters.POPULATION_SIZE; i++) {
-            tempFitness = evaluate(searchPopulation.get(i),i);
-            counter++;
-            if (tempFitness < bestPopulationFitness){
-                bestPopulationFitness = tempFitness;
+            evaluate(searchPopulation.get(i));
+            if (searchPopulation.get(i).getSumOfTestsFailed() < bestPopulationFitness){
+                bestPopulationFitness = searchPopulation.get(i).getSumOfTestsFailed();
                 bestSize = searchPopulation.get(i).size();
-            } else if (tempFitness == bestPopulationFitness){ // track smallest solver at best fitness level
+            } else if (searchPopulation.get(i).getSumOfTestsFailed() == bestPopulationFitness){ // track smallest solver at best fitness level
                 if (searchPopulation.get(i).size() < bestSize)
                     bestSize = searchPopulation.get(i).size();
             } 
-            
+
             if ((bestPopulationFitness == 0) && (evaluationsToSolve==-1))
-               evaluationsToSolve = counter; 
-            
+                evaluationsToSolve = i+1; 
+
         }
 
-        printStats(0,searchPopulation.size());
+        printStats(parameters.POPULATION_SIZE);
 
         if (bestPopulationFitness == 0)
-                return evaluationsToSolve;
-                
-        for (int i=1; i<parameters.GENERATIONS; i++) {
-                
-            for (int j=0; j<searchPopulation.size(); j++ ) {
-                int parentIndex = maintenance.tournament();
-                ArraySolution parent1 = searchPopulation.get(parentIndex);
-                ArraySolution child = parent1.clone(); 
-                if (RandomNumberGenerator.getRandom().nextDouble() < parameters.CROSSOVER_PROBABILITY ) {
-                    parentIndex = maintenance.tournament();
-                    ArraySolution parent2 = searchPopulation.get(parentIndex);
-                    while (parent1==parent2){
-                        parentIndex = maintenance.tournament();
-                        parent2 = searchPopulation.get(parentIndex);
-                    }
-                    child.crossover(parent2);
-                } else {
-                    child.mutation(parameters.MUTATION_PROBABILITY_PER_NODE);
-                }
-                worstSolutionIndex = maintenance.negativeTournament();
-                searchPopulation.get(worstSolutionIndex).clean();// gives less work to the garbage collector, which can sometimes complain if lots of time is spent dereferencing maps
-                searchPopulation.set(worstSolutionIndex, child);
-                tempFitness = evaluate(child, worstSolutionIndex);
-                counter++;
-                if (tempFitness < bestPopulationFitness){
-                    bestPopulationFitness = tempFitness; 
-                    bestSize = searchPopulation.get(worstSolutionIndex).size();
-                } 
-                else if (tempFitness == bestPopulationFitness){ // track smallest solver at best fitness level
-                    if (searchPopulation.get(worstSolutionIndex).size() < bestSize)
-                        bestSize = searchPopulation.get(worstSolutionIndex).size();
-                } 
-                if ((bestPopulationFitness == 0) && (evaluationsToSolve==-1))
-                    evaluationsToSolve = counter; 
+            return evaluationsToSolve;
+
+        for (int i=parameters.POPULATION_SIZE; i<parameters.GENERATIONS*parameters.POPULATION_SIZE; i++) {
             
+            //for (int j=0; j<searchPopulation.size(); j++ ) {
+            ArraySolution parent1 = maintenance.tournament(searchPopulation);
+            ArraySolution child = parent1.clone(); 
+            if (RandomNumberGenerator.getRandom().nextDouble() < parameters.CROSSOVER_PROBABILITY ) {
+                ArraySolution parent2 = maintenance.tournament(searchPopulation);
+                while (parent1 == parent2){
+                    parent2 = maintenance.tournament(searchPopulation);
+                }
+                child.crossover(parent2);
+            } else {
+                child.mutation(parameters.MUTATION_PROBABILITY_PER_NODE);
             }
-            System.gc(); // can grow a lot, so prompt to the garbage collector
-            printStats(i,searchPopulation.size());
+            int worstSolutionKey = maintenance.negativeTournamentKey(searchPopulation);
+            searchPopulation.get(worstSolutionKey).clean();// gives less work to the garbage collector, which can sometimes complain if lots of time is spent dereferencing maps
+            searchPopulation.put(worstSolutionKey, child);
+            evaluate(child);
+            if (searchPopulation.get(worstSolutionKey).getSumOfTestsFailed() < bestPopulationFitness){
+                bestPopulationFitness = searchPopulation.get(worstSolutionKey).getSumOfTestsFailed(); 
+                bestSize = searchPopulation.get(worstSolutionKey).size();
+            } 
+            else if (searchPopulation.get(worstSolutionKey).getSumOfTestsFailed() == bestPopulationFitness){ // track smallest solver at best fitness level
+                if (searchPopulation.get(worstSolutionKey).size() < bestSize) {
+                    bestSize = searchPopulation.get(worstSolutionKey).size();
+                }
+            } 
+            
+            if ((bestPopulationFitness == 0) && (evaluationsToSolve==-1))
+                evaluationsToSolve = i+1; 
+
+            //}
+            if (((i+1)%parameters.POPULATION_SIZE)==0){ 
+                System.gc(); // can grow a lot, so prompt to the garbage collector
+                printStats(i+1);
+            }
+            
             if (bestPopulationFitness == 0)
                 return evaluationsToSolve;
         }
@@ -208,10 +215,10 @@ public class BooleanGP
     /*
      * Method writes out the results to a file using the results attribute
      */
-    private void writeResultsFile() throws java.io.IOException {
+    void writeResultsFile() throws java.io.IOException {
         results.writeOut();
     }
-    
+
     /*
      * Method calculates the various tracked statistics of the optimisation run
      */
@@ -219,7 +226,7 @@ public class BooleanGP
         averagePopulationFitness=0.0;
         averagePopulationLength=0.0;
         for (int k=0; k<parameters.POPULATION_SIZE; k++ ){
-            averagePopulationFitness += maintenance.getFitness(k);
+            averagePopulationFitness += searchPopulation.get(k).getSumOfTestsFailed();
             averagePopulationLength += searchPopulation.get(k).size();
         }
         averagePopulationFitness /= parameters.POPULATION_SIZE; 
@@ -229,38 +236,38 @@ public class BooleanGP
     /*
      * Method evaluates the fitness of a population
      */
-    private int evaluate(ArraySolution s, int index) {
-        return maintenance.fitnessFunction(s, index);
+    void evaluate(ArraySolution s) {
+        maintenance.evaluateFitness(searchPopulation,s);
     }
 
     /*
      * Method prints out various statistics to the terminal window
      */
-    private void printStats(int generation, int numberPerGeneration){
+    void printStats(int evaluations){
         calculateAverages();
-        
-        if ( ((generation+1) * numberPerGeneration)%10000 == 0 ) {
-            System.out.println("Generation: " + generation + ", " +
-            "Av. tree size: " + averagePopulationLength + ", " +
-            "Av. population fitness: " + averagePopulationFitness + ", " +
-            "Size of best: " + bestSize  + ", " +
-            "Best fitness: " + bestPopulationFitness);
-        
+
+        if ( evaluations%10000 == 0 ) {
+            System.out.println("Evaluations: " + evaluations + ", " +
+                "Av. tree size: " + averagePopulationLength + ", " +
+                "Av. population fitness: " + averagePopulationFitness + ", " +
+                "Size of best: " + bestSize  + ", " +
+                "Best fitness: " + bestPopulationFitness);
+
             System.out.println("Memory used: " + (Runtime.getRuntime().totalMemory()+Runtime.getRuntime().freeMemory())/1048576 + "M");    
         }
-        
+
         if (maintenance instanceof DominationMaintenance){
             int setSize = ((DominationMaintenance) maintenance).getParetoSetSize();
-            System.out.println("Pareto set size: " + setSize);
+            //System.out.println("Pareto set size: " + setSize);
             results.paretoSetSize.add(setSize);
         }
-        
+
         if (maintenance instanceof BestSolver){
             int setSize = ((BestSolver) maintenance).getMapSize();
-            System.out.println("Map size: " + setSize);
+            //System.out.println("Map size: " + setSize);
             results.paretoSetSize.add(setSize);
         }
-        
+
         results.bestFitness.add(bestPopulationFitness);
         results.averageFitness.add(averagePopulationFitness);
         results.averageSize.add(averagePopulationLength);

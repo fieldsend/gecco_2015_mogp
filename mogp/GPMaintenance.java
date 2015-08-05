@@ -1,5 +1,7 @@
 package mogp;
 
+import java.util.HashMap;
+
 /**
  * GPMaintenance interface denotes the methods all maintence objects
  * must provide. Note that the object will need to track overall levels
@@ -8,37 +10,53 @@ package mogp;
  * regime is using (e.g. for multi-objective variants)
  * 
  * @author Jonathan Fieldsend
- * @version 1.0
+ * @version 1.1
  */
 public interface GPMaintenance
 {
     /**
-     * Get fitness of s, and update data at index
+     * Carry out tournament selection and return fittest
      * 
-     * @param s solution to evaluate
-     * @param index index to track fitness with
-     * @return overall fitness value
+     * @param pop set of solutions
+     * @return fittest solution from a tournament
      */
-    int fitnessFunction(ArraySolution s, int index);
+    ArraySolution tournament(HashMap<Integer, ArraySolution> pop);
     
     /**
-     * Carry out tournament selection and return index of fittest
+     * Carry out negative tournament selection least fit - solution with 
+     * corresponding index is removed from internal maintence state when 
+     * method completes
      * 
-     * @return index of fittest
+     * @param pop set of solutions
+     * @return least fit solution from a tournament
      */
-    int tournament();
+    ArraySolution negativeTournament(HashMap<Integer, ArraySolution> pop);
     
     /**
-     * Carry out negative tournament selection and return index of least fit
+     * Carry out negative tournament selection least fit - returned 
+     * solution is removed from internal maintence state when 
+     * method completes
      * 
-     * @param index of fittest member in tournament
+     * @param pop set of solutions
+     * @return key of least fit solution from a tournament
      */
-    int negativeTournament();
+    int negativeTournamentKey(HashMap<Integer, ArraySolution> pop);
+    
     
     /**
-     * Get overall fitness of solution at index
+     * Get overall fitness of solution
      * 
-     * @return overall fitness value
+     * @param solution to evaluate
      */
-    int getFitness(int index);
+    void evaluateFitness(HashMap<Integer, ArraySolution> pop, ArraySolution solution);
+    
+    /**
+     * Select best solutions from combination of pop and children, and replace
+     * pop membership with them. There must be no overlap of keys in pop
+     * anc children.
+     * 
+     * @param pop search population
+     * @param children child population
+     */
+    void generateNextSearchPopulation(HashMap<Integer, ArraySolution> pop, HashMap<Integer, ArraySolution> children);  
 }

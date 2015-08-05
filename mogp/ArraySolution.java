@@ -1,13 +1,17 @@
 package mogp;
 
+
 /**
  * ArraySolution class represents GP tree solutions as arrays, and
  * allows their processing.
  * 
+ * Note this class has a natural ordering which is inconsistent with 
+ * equals.
+ * 
  * @author Jonathan Fieldsend 
- * @version 1.0
+ * @version 1.1
  */
-public class ArraySolution
+public class ArraySolution implements Comparable<ArraySolution>
 {
     private int[] program; // program represented as an array with elements refering to terminals or operators
     private int pointer; // reference to current element in program being processed
@@ -15,6 +19,9 @@ public class ArraySolution
     private Problem problem; // object representing problem to be solved
     private NodeSet nodeSet; // legal set of nodes used in this optimisation
     private int usedLength; // effective number of tree elements in this solution
+    
+    private int sumOfTestsFailed = -1;
+    private boolean[] testsPassed;
     
     /**
      * Constructs an initial solution with the corresponding algorithm parameters, 
@@ -45,7 +52,7 @@ public class ArraySolution
         nodeSet = s.nodeSet;
         usedLength = s.usedLength;
         program = new int[s.program.length];
-        for (int i=0; i<program.length; i++)
+        for (int i=0; i<program.length; i++) // only need to copy the elements in use
             program[i] = s.program[i];
     }
 
@@ -213,5 +220,51 @@ public class ArraySolution
             return traverse( traverse( ++index ) );
             
         return ++index;
+    }
+    
+    /**
+     * Returns the sum of tests failed by this ArraySolution. If this
+     * solution has not been evaluated, will return -1
+     * 
+     * @returns total number of tests failed
+     */
+    public int getSumOfTestsFailed() {
+        return sumOfTestsFailed;
+    }
+    
+    /**
+     * Returns an array of booleans indicating if each test has been passed
+     * of not. If this solution has not been evaluated, will return null
+     * 
+     * @returns array of booleans, the ith element indicating if the ith
+     * test has been passed (true) or failed (false)
+     */
+    public boolean[] getTestsPassed() {
+        return testsPassed;
+    }
+    
+    
+    /**
+     * Sets tests passed by a solution once it has been evaluated
+     * 
+     * @param array of booleans, the ith element indicating if the ith
+     * test has been passed (true) or failed (false)
+     */
+    public void setTestsPassed(boolean[] testsPassed){
+        this.testsPassed = testsPassed;
+        // now calaulated the total number of failed tests
+        this.sumOfTestsFailed = 0;
+        for (boolean b : testsPassed)
+            if (b == false)
+                sumOfTestsFailed++;
+    }
+    
+    @Override
+    public int compareTo(ArraySolution a) {
+        if (this.sumOfTestsFailed < a.sumOfTestsFailed)
+            return -1;
+        if (this.sumOfTestsFailed == a.sumOfTestsFailed)
+            return 0;
+        return 1;    
     }
 }

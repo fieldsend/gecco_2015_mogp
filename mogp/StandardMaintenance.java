@@ -1,23 +1,26 @@
 package mogp;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Collections;
 /**
  * StandardMaintence class is a vanilla implementation of the
  * GPMaintance interface, where fitness used in tournament selection 
  * is the aggregate fitness across test problems
  * 
  * @author Jonathan Fieldsend 
- * @version 1.0
+ * @version 1.1
  */
 public class StandardMaintenance implements GPMaintenance
 {
-    int[] fitness;
     Problem problem;
     Parameters parameters;
-    int indexOfFittest = -1;
-    int fittest = Integer.MAX_VALUE;
+    ArraySolution bestFitnessSolution;
     MinimisationType type;
-    int[] lengths;
-
+    
     /**
      * Constructor initialises with standard minimisation type (aggregate fitness)
      * 
@@ -39,112 +42,168 @@ public class StandardMaintenance implements GPMaintenance
         this.problem = problem;
         this.parameters = parameters;
         this.type = type;
-        fitness = new int[parameters.POPULATION_SIZE];
-        for (int i=0; i<parameters.POPULATION_SIZE; i++)
-            fitness[i] = Integer.MAX_VALUE;
-        SetUpLength(); 
     } 
 
-    /*
-     * If using parsimounous approach want to keep track of the length of each solution 
-     * alongside the fitness
-     */
-    private void SetUpLength() {
-        if (type.equals(MinimisationType.PARSIMONIOUS))
-            lengths =  new int[parameters.POPULATION_SIZE];
-        else
-            lengths =  new int[0];
-    }
-
     /**
      * @InheritDoc
      */
     @Override
-    public int tournament() {
-        int bestIndex = getRandomParentIndex();
-        int bestValue = fitness[bestIndex];
+    public ArraySolution tournament(HashMap<Integer, ArraySolution> pop) {
+        ArraySolution solution = getRandomParent(pop);
 
         for (int i=1; i<parameters.TOURNAMENT_SIZE; i++){
-            int comparisonIndex = getRandomParentIndex();
-            while (comparisonIndex == bestIndex)
-                comparisonIndex = getRandomParentIndex();
-            int comparisonValue = fitness[comparisonIndex];
-            if (comparisonValue<bestValue){
-                bestValue = comparisonValue;
-                bestIndex = comparisonIndex;
+            ArraySolution comparisonSolution = getRandomParent(pop);
+            while (solution == comparisonSolution)
+                comparisonSolution = getRandomParent(pop);
+            if (comparisonSolution.getSumOfTestsFailed() < solution.getSumOfTestsFailed()){
+                solution = comparisonSolution;
             }
         }
-        return bestIndex;
+        return solution;
     }
 
     /**
      * @InheritDoc
      */
     @Override
-    public int negativeTournament() {
-        int worstIndex = indexOfFittest;
-        while(worstIndex == indexOfFittest) {
-            worstIndex = getRandomParentIndex();
+    public ArraySolution negativeTournament(HashMap<Integer, ArraySolution> pop) {
+        ArraySolution solution = getRandomParent(pop);
+        while(solution == bestFitnessSolution) {
+            solution = getRandomParent(pop);
         }
-        int worstValue = fitness[worstIndex];
 
         for (int i=1; i<parameters.TOURNAMENT_SIZE; i++){
-            int comparisonIndex = getRandomParentIndex();
-            while ((comparisonIndex == worstIndex) || (comparisonIndex == indexOfFittest))
-                comparisonIndex = getRandomParentIndex();
-            int comparisonValue = fitness[comparisonIndex];
-            if (comparisonValue>worstValue){
-                worstValue = comparisonValue;
-                worstIndex = comparisonIndex;
+            ArraySolution comparisonSolution = getRandomParent(pop);
+            while ((comparisonSolution == solution) || (comparisonSolution == bestFitnessSolution))
+                comparisonSolution = getRandomParent(pop);
+
+            if (comparisonSolution.getSumOfTestsFailed() > solution.getSumOfTestsFailed()){
+                solution = comparisonSolution;
             } else if (type.equals(MinimisationType.PARSIMONIOUS)) {
-                if (comparisonValue == worstValue) {
-                    if (lengths[comparisonIndex] > lengths[worstIndex]) {
-                        worstValue = comparisonValue;
-                        worstIndex = comparisonIndex;
+                if (comparisonSolution.getSumOfTestsFailed() == solution.getSumOfTestsFailed()){
+                    if (comparisonSolution.size() > solution.size()) {
+                        solution = comparisonSolution;
                     }
                 }
             }
         }
-        return worstIndex;
+        return solution;
     }
 
+    /**
+     * @InheritDoc
+     */
+    @Override
+    public int negativeTournamentKey(HashMap<Integer, ArraySolution> pop) {
+        int solutionKey = getRandomParentKey(pop);
+        while(pop.get(solutionKey) == bestFitnessSolution) {
+            solutionKey = getRandomParentKey(pop);
+        }
+
+        for (int i=1; i<parameters.TOURNAMENT_SIZE; i++){
+            int comparisonSolutionKey = getRandomParentKey(pop);
+            while ((comparisonSolutionKey == solutionKey) || (pop.get(comparisonSolutionKey) == bestFitnessSolution))
+                comparisonSolutionKey = getRandomParentKey(pop);
+
+            if (pop.get(comparisonSolutionKey).getSumOfTestsFailed() > pop.get(solutionKey).getSumOfTestsFailed()){
+                solutionKey = comparisonSolutionKey;
+            } else if (type.equals(MinimisationType.PARSIMONIOUS)) {
+                if (pop.get(comparisonSolutionKey).getSumOfTestsFailed() == pop.get(solutionKey).getSumOfTestsFailed()){
+                    if (pop.get(comparisonSolutionKey).size() > pop.get(solutionKey).size()) {
+                        solutionKey = comparisonSolutionKey;
+                    }
+                }
+            }
+        }
+        return solutionKey;
+    }
     
     /**
      * @InheritDoc
      */
     @Override
-    public int fitnessFunction(ArraySolution s, int index) {
+    public void evaluateFitness(HashMap<Integer, ArraySolution> pop, ArraySolution s) {
+        boolean[] results = new boolean[problem.fitnessCases];
         int f = 0;
         for (int i=0; i<problem.fitnessCases; i++ ){
             InputVector.setInput(problem.inputs[i]);
-            if (s.process() != problem.targets[i])
+            if (s.process() != problem.targets[i]){
                 f++;
+                results[i] = false;
+            } else {
+                results[i] = true;
+            }
         }
-        fitness[index] =f;
-        if (f < fittest) {
-            fittest =f;
-            indexOfFittest = index;
+        // track best seen so far
+        if (bestFitnessSolution==null){
+             bestFitnessSolution = s;
+        } else if (f < bestFitnessSolution.getSumOfTestsFailed()) {
+            bestFitnessSolution = s;
         }
-        if (type.equals(MinimisationType.PARSIMONIOUS))
-            lengths[index] = s.size();
-        return f;
+
+        s.setTestsPassed(results);  
     }
 
     /**
-     * Method returns the index of a random member of the search 
-     * population
+     * Method returns the a random member of the set pop
      * 
-     * @return random population member index
+     * @param set to select a random member from
+     * @return random population member
      */
-    int getRandomParentIndex(){
-        return RandomNumberGenerator.getRandom().nextInt(parameters.POPULATION_SIZE);
+    ArraySolution getRandomParent(HashMap<Integer, ArraySolution> pop){
+        return pop.get(RandomNumberGenerator.getRandom().nextInt(pop.size()));
+    }
+
+    /**
+     * Method returns the a random key of the set pop - assumes keys are 0 to size()-1
+     * 
+     * @param set to select a random member from
+     * @return random population member key
+     */
+    int getRandomParentKey(HashMap<Integer, ArraySolution> pop){
+        return RandomNumberGenerator.getRandom().nextInt(pop.size());
     }
 
     /**
      * @InheritDoc
      */
     @Override
-    public int getFitness(int index) {
-        return fitness[index];
+    public void generateNextSearchPopulation(HashMap<Integer, ArraySolution> pop, HashMap<Integer, ArraySolution> children) {
+        // note, the keys in pop must not overlap with the keys in children
+        HashMap<Integer,ArraySolution> combinedPopulation = new HashMap<>(pop);
+        combinedPopulation.putAll(children);
+
+        Set<ArraySolution> setOfBestSolutions = new HashSet<>();
+        setOfBestSolutions.add(bestFitnessSolution); // always take best
+        while (setOfBestSolutions.size() < parameters.POPULATION_SIZE) {
+            setOfBestSolutions.add(tournamentWithParsimony(combinedPopulation));
+        }
+        // setOfBestSolutions now includes parameters.POPULATION_SIZE solutions to preserve
+        int i=0;
+        // replace the search population
+        for (ArraySolution s : setOfBestSolutions){
+            pop.put(i,s);
+            i++;
+        }
+    }
+
+    ArraySolution tournamentWithParsimony(HashMap<Integer, ArraySolution> pop) {
+        ArraySolution solution = getRandomParent(pop);
+
+        for (int i=1; i<parameters.TOURNAMENT_SIZE; i++){
+            ArraySolution comparisonSolution = getRandomParent(pop);
+            while (solution == comparisonSolution)
+                comparisonSolution = getRandomParent(pop);
+            if (comparisonSolution.getSumOfTestsFailed() < solution.getSumOfTestsFailed()){
+                solution = comparisonSolution;
+            } else if (type.equals(MinimisationType.PARSIMONIOUS)) {
+                if (comparisonSolution.getSumOfTestsFailed() == solution.getSumOfTestsFailed()){
+                    if (comparisonSolution.size() < solution.size()) {
+                        solution = comparisonSolution;
+                    }
+                }
+            }
+        }
+        return solution;
     }
 }
