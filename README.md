@@ -3,6 +3,10 @@
 Codebase for GECCO 2015 paper Strength Through Diversity: Disaggregation and Multi-Objectivisation 
 Approaches for Genetic Programming by Jonathan Fieldsend and Alberto Moraglio 
 
+Paper available at the links below:
+https://ore.exeter.ac.uk/repository/handle/10871/17041
+https://doi.org/10.1145/2739480.2754643
+
 Class to run is the BooleanGPO class in the mogp package. You will need to compile the source of the package first.
 
 When running, arguments need to be provided at the command line. If these are ommitted some advice is provided, i.e., if the command line prompt is indicted with prompt]
